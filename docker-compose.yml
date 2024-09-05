@@ -1,0 +1,46 @@
+version: '3.9'
+
+networks:
+  docker-compose-net:
+    driver: bridge
+
+volumes:
+  mysql_data: {}
+
+services:
+  mysql:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes: 
+      - mysql_data:/var/lib/mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT} 
+      - MYSQL_DATABASE=wp-fiap
+      - MYSQL_USER=user-fiap
+      - MYSQL_PASSWORD=pass-fiap
+    networks:
+      - docker-compose-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+  wordpress:
+    image: wordpress:latest
+    depends_on: 
+      mysql:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    restart: always
+    environment:
+      - WORDPRESS_DB_HOST=mysql:3306
+      - WORDPRESS_DB_USER=user-fiap
+      - WORDPRESS_DB_PASSWORD=pass-fiap
+      - WORDPRESS_DB_NAME=wp-fiap
+    volumes:
+      - ./wordpress:/var/www/html
+    networks:
+      - docker-compose-net
